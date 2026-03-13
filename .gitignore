@@ -59,6 +59,8 @@ replay_pid*
 # Decommenta la riga sotto se preferisci NON committarlo
 # ---------------------------
 # .mvn/wrapper/maven-wrapper.jar
+mvnw
+mvnw.cmd
 
 
 # ---------------------------
