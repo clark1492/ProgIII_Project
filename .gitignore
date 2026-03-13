@@ -61,7 +61,7 @@ replay_pid*
 # .mvn/wrapper/maven-wrapper.jar
 mvnw
 mvnw.cmd
-
+.mvn/
 
 # ---------------------------
 # OS
