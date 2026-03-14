@@ -4,20 +4,20 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-
 import java.io.IOException;
 
-public class MainServer extends Application{
+public class MainServer extends Application {
 
+  @Override
   public void start(Stage stage) {
-
-    FXMLLoader fxmlLoader = new FXMLLoader(MainServer.class.getResource("server.fxml"));
-    Scene scene;
     try {
-      scene = new Scene(fxmlLoader.load());
-      stage.setTitle("Server");
+      FXMLLoader fxmlLoader = new FXMLLoader(MainServer.class.getResource("server.fxml"));
+      Scene scene = new Scene(fxmlLoader.load());
+      stage.setTitle("UniTo Mail — Server");
       stage.setScene(scene);
-      stage.setResizable(false);
+      stage.setResizable(true);
+      stage.setMinWidth(400);
+      stage.setMinHeight(300);
       stage.show();
     } catch (IOException e) {
       e.printStackTrace();
@@ -28,4 +28,3 @@ public class MainServer extends Application{
     launch();
   }
 }
-

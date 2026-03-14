@@ -6,16 +6,20 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 public class Connection {
-  private Socket server;
-  private ObjectOutputStream outputStream;
-  private ObjectInputStream inputStream;
+
+  private static final String HOST = "127.0.0.1";
+  private static final int    PORT = 8189;
+
+  private final Socket server;
+  private final ObjectOutputStream outputStream;
+  private final ObjectInputStream  inputStream;
+
+  public Connection() throws IOException {
+    this(HOST, PORT);
+  }
 
   public Connection(String host, int port) throws IOException {
     server = new Socket(host, port);
-    openStreams();
-  }
-
-  public void openStreams() throws IOException {
     outputStream = new ObjectOutputStream(server.getOutputStream());
     outputStream.flush();
     inputStream = new ObjectInputStream(server.getInputStream());
@@ -30,15 +34,18 @@ public class Connection {
     return inputStream.readObject();
   }
 
-  public void closeConnection() throws IOException {
-    if (server != null ) {
-      try{
-        outputStream.close();
-        inputStream.close();
-        server.close();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+  
+  public boolean isConnected() {
+    return server != null && !server.isClosed() && server.isConnected();
+  }
+
+  public void closeConnection() {
+    try {
+      if (outputStream != null) outputStream.close();
+      if (inputStream  != null) inputStream.close();
+      if (server != null)       server.close();
+    } catch (IOException e) {
+      e.printStackTrace();
     }
   }
 }

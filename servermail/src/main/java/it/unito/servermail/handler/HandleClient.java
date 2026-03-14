@@ -2,10 +2,7 @@ package it.unito.servermail.handler;
 
 import it.unito.servermail.utils.FilesManager;
 import it.unito.servermail.model.*;
-import java.io.IOException;
-import java.io.InvalidObjectException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
@@ -17,9 +14,9 @@ public class HandleClient implements Runnable {
   private User client;
   private ObjectInputStream inStream;
   private ObjectOutputStream outStream;
-  private boolean exit;
+  private volatile boolean exit;
 
-  public HandleClient(ServerModel server, Socket incoming) throws IllegalArgumentException, IOException, ClassNotFoundException {
+  public HandleClient(ServerModel server, Socket incoming) throws IllegalArgumentException, IOException {
 
     if (server == null || incoming == null)
       throw new IllegalArgumentException();
@@ -39,18 +36,32 @@ public class HandleClient implements Runnable {
 
   private void closeStreams() {
     try {
-      if (inStream != null)  inStream.close();
-      if (outStream != null) outStream.close();
-      if (incoming != null)  incoming.close();
+      if (inStream != null)
+        inStream.close();
+      if (outStream != null)
+        outStream.close();
+      if (incoming != null)
+        incoming.close();
     } catch (IOException e) {
       e.printStackTrace();
     }
   }
 
-  private void sendResponse(String resp) throws IllegalArgumentException, IOException {
+  private void sendResponse(String resp) throws IOException {
     if (resp == null)
       throw new IllegalArgumentException();
     outStream.writeObject(resp);
+    outStream.flush();
+  }
+
+  private Email copyEmail(Email original) throws IOException, ClassNotFoundException {
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    try (ObjectOutputStream out = new ObjectOutputStream(bos)) {
+      out.writeObject(original);
+    }
+    try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()))) {
+      return (Email) in.readObject();
+    }
   }
 
   private void loginData() throws IOException, ClassNotFoundException {
@@ -76,6 +87,7 @@ public class HandleClient implements Runnable {
     sendResponse("SERVER_SUCCESS");
     client = server.getUser(email);
     outStream.writeObject(client);
+    outStream.flush();
     server.setLogText("[" + client.getEmail() + "] authenticated\n");
   }
 
@@ -93,11 +105,11 @@ public class HandleClient implements Runnable {
     LinkedList<Email> news = new LinkedList<>();
     LinkedList<Email> inbox = FilesManager.getMailBox(client.getEmail(), Folder.INBOX);
     for (Email email : inbox) {
-      if (!email.isRead()) {
+      if (!email.isRead())
         news.add(email);
-      }
     }
     outStream.writeObject(news);
+    outStream.flush();
   }
 
   private void signInRequest() throws IOException, ClassNotFoundException {
@@ -133,6 +145,7 @@ public class HandleClient implements Runnable {
     Folder fold = (Folder) data;
     LinkedList<Email> mailList = FilesManager.getMailBox(client.getEmail(), fold);
     outStream.writeObject(mailList);
+    outStream.flush();
   }
 
   private void sendEmailRequest() throws IOException, ClassNotFoundException {
@@ -158,16 +171,19 @@ public class HandleClient implements Runnable {
 
     for (int i = 0; i < listDests.size(); i++) {
       boolean lastDest = (i == listDests.size() - 1);
-      FilesManager.insMailToMailbox(toSend, Folder.INBOX, listDests.get(i), !multiDest || lastDest);
+      Email copy = copyEmail(toSend);
+      FilesManager.insMailToMailbox(copy, Folder.INBOX, listDests.get(i), !multiDest || lastDest);
 
-      if (reply)
-        FilesManager.insMailToMailbox(toSend, Folder.SENT, listDests.get(i), false);
+      if (reply) {
+        Email copySent = copyEmail(toSend);
+        FilesManager.insMailToMailbox(copySent, Folder.SENT, listDests.get(i), false);
+      }
     }
 
-    FilesManager.insMailToMailbox(toSend, Folder.SENT, sender, false);
+    FilesManager.insMailToMailbox(copyEmail(toSend), Folder.SENT, sender, false);
 
     if (reply)
-      FilesManager.insMailToMailbox(toSend, Folder.INBOX, sender, false);
+      FilesManager.insMailToMailbox(copyEmail(toSend), Folder.INBOX, sender, false);
 
     sendResponse("SERVER_SUCCESS");
     server.setLogText("[" + client.getEmail() + "] : mail " + toSend.getId() + " sent to " + listDests + "\n");
@@ -208,8 +224,9 @@ public class HandleClient implements Runnable {
   public void run() {
 
     while (!exit) {
+      String who = (client != null) ? client.getEmail() : "anonymous";
       try {
-        String intro = (client != null) ? ("[" + client.getEmail() + "] ") : ("[anonymous] ");
+        String intro = "[" + who + "] ";
         System.out.println(intro + "waiting for request...");
 
         Object read = inStream.readObject();
@@ -221,14 +238,35 @@ public class HandleClient implements Runnable {
           throw new InvalidObjectException("Command must be a String\n");
 
         switch ((String) read) {
-          case "LOGIN_REQUEST"   -> { System.out.println(intro + "LOGIN_REQUEST");   loginData();        }
-          case "SIGNIN_REQUEST"  -> { System.out.println(intro + "SIGNIN_REQUEST");  signInRequest();    }
-          case "MAILBOX_REQUEST" -> { System.out.println(intro + "MAILBOX_REQUEST"); mailBoxRequest();   }
-          case "SEND_EMAIL"      -> { System.out.println(intro + "SEND_EMAIL");      sendEmailRequest(); }
-          case "DEL_EMAIL"       -> { System.out.println(intro + "DEL_EMAIL");       deleteEmailRequest();}
-          case "READ_FLAG"       -> { System.out.println(intro + "READ_FLAG");       readFlagRequest();  }
-          case "KEEP_UPDATE"     -> { System.out.println(intro + "KEEP_UPDATE");     keepUpdate();       }
-          case "LOG_OUT"         -> {
+          case "LOGIN_REQUEST" -> {
+            System.out.println(intro + "LOGIN_REQUEST");
+            loginData();
+          }
+          case "SIGNIN_REQUEST" -> {
+            System.out.println(intro + "SIGNIN_REQUEST");
+            signInRequest();
+          }
+          case "MAILBOX_REQUEST" -> {
+            System.out.println(intro + "MAILBOX_REQUEST");
+            mailBoxRequest();
+          }
+          case "SEND_EMAIL" -> {
+            System.out.println(intro + "SEND_EMAIL");
+            sendEmailRequest();
+          }
+          case "DEL_EMAIL" -> {
+            System.out.println(intro + "DEL_EMAIL");
+            deleteEmailRequest();
+          }
+          case "READ_FLAG" -> {
+            System.out.println(intro + "READ_FLAG");
+            readFlagRequest();
+          }
+          case "KEEP_UPDATE" -> {
+            System.out.println(intro + "KEEP_UPDATE");
+            keepUpdate();
+          }
+          case "LOG_OUT" -> {
             System.out.println(intro + "LOG_OUT");
             exit = true;
             server.setLogText(intro + "logged out\n");
@@ -237,15 +275,16 @@ public class HandleClient implements Runnable {
         }
 
       } catch (IOException e) {
-        // FIX: controllo null su client prima di chiamare getEmail()
-        String who = (client != null) ? client.getEmail() : "anonymous";
+
         e.printStackTrace();
         exit = true;
         server.setLogText("Client " + who + " connection lost\n");
       } catch (ClassNotFoundException e) {
-        System.out.println("Illegal class received");
+
+        server.setLogText("Client " + who + " sent an illegal class\n");
         e.printStackTrace();
       } catch (Exception e) {
+        server.setLogText("Client " + who + " unexpected error: " + e.getMessage() + "\n");
         e.printStackTrace();
       }
     }

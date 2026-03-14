@@ -4,12 +4,13 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-
 import java.io.IOException;
 
 public class Login extends Application {
 
-  private static Stage stg;
+  // FIX: volatile — stg viene scritto dal thread JavaFX e letto da altri thread
+  // (es. LoginModel.clientScene())
+  private static volatile Stage stg;
 
   public static Stage getStage() {
     return stg;
@@ -17,18 +18,16 @@ public class Login extends Application {
 
   @Override
   public void start(Stage stage) {
+    stg = stage;
     try {
-
-      stg = stage;
-
       FXMLLoader fxmlLoader = new FXMLLoader(Login.class.getResource("login.fxml"));
       Scene scene = new Scene(fxmlLoader.load());
-      stage.setTitle("Log In");
+      stage.setTitle("UniTo Mail — Login");
       stage.setScene(scene);
       stage.setResizable(false);
       stage.show();
     } catch (IOException e) {
-      System.out.println("Finish");
+      System.err.println("[Login] Failed to load login.fxml: " + e.getMessage());
       e.printStackTrace();
     }
   }

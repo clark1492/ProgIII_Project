@@ -7,6 +7,7 @@ import java.util.List;
 public class Email implements Serializable {
 
   private static final long serialVersionUID = 123L;
+
   private int id;
   private String sender;
   private List<String> dests;
@@ -17,7 +18,8 @@ public class Email implements Serializable {
   private Email reply;
   private Date date;
 
-  public Email(){}
+  public Email() {
+  }
 
   public Email(int id, String sender, List<String> dests, String subject, Date date) {
     this.id = id;
@@ -25,8 +27,8 @@ public class Email implements Serializable {
     this.dests = dests;
     this.subject = subject;
     this.date = date;
-    folder = Folder.WRITE;
-    read = false;
+    this.folder = Folder.WRITE;
+    this.read = false;
   }
 
   public int getId() {
@@ -41,40 +43,40 @@ public class Email implements Serializable {
     return sender;
   }
 
-  public void setSender(String sender) {
-    this.sender = sender;
+  public void setSender(String s) {
+    this.sender = s;
   }
 
   public List<String> getDests() {
     return dests;
   }
 
-  public void setDests(List<String> dests) {
-    this.dests = dests;
+  public void setDests(List<String> d) {
+    this.dests = d;
   }
 
   public String getSubject() {
     return subject;
   }
 
-  public void setSubject(String subject) {
-    this.subject = subject;
+  public void setSubject(String s) {
+    this.subject = s;
   }
 
   public String getContent() {
     return content;
   }
 
-  public void setContent(String content) {
-    this.content = content;
+  public void setContent(String c) {
+    this.content = c;
   }
 
   public Folder getBelonging() {
     return folder;
   }
 
-  public void setBelonging(Folder folder) {
-    this.folder = folder;
+  public void setBelonging(Folder f) {
+    this.folder = f;
   }
 
   public boolean isRead() {
@@ -90,7 +92,7 @@ public class Email implements Serializable {
   }
 
   public void setDate(Date date) {
-    this.date = date;
+    this.date = (date != null) ? new Date(date.getTime()) : null;
   }
 
   public Email getReply() {
@@ -103,6 +105,22 @@ public class Email implements Serializable {
 
   @Override
   public String toString() {
-    return String.join(" - ", List.of(this.subject,this.sender));
+    String s = (subject != null) ? subject : "(no subject)";
+    String f = (sender != null) ? sender : "(unknown)";
+    return s + " - " + f;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (!(o instanceof Email))
+      return false;
+    return this.id == ((Email) o).id;
+  }
+
+  @Override
+  public int hashCode() {
+    return Integer.hashCode(id);
   }
 }

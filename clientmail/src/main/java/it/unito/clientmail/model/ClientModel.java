@@ -18,15 +18,13 @@ import java.util.LinkedList;
 
 public class ClientModel {
 
-  private User user;
-  private Connection connection;
-  private ListProperty<Email> emailListProperty;
-  private ObservableList<Email> currentEmailList;
-  private ObjectProperty<Folder> currentFolder;
-  private ObjectProperty<Email> currentMail;
+  private final User user;
+  private volatile Connection connection;
 
-  private boolean available = true;
-
+  private final ListProperty<Email> emailListProperty;
+  private final ObservableList<Email> currentEmailList;
+  private final ObjectProperty<Folder> currentFolder;
+  private final ObjectProperty<Email> currentMail;
 
   public ClientModel(User user, Connection connection) {
     this.user = user;
@@ -34,20 +32,21 @@ public class ClientModel {
     currentFolder = new SimpleObjectProperty<>();
     currentMail = new SimpleObjectProperty<>();
     currentEmailList = FXCollections.observableList(new LinkedList<>());
-    emailListProperty = new SimpleListProperty<>();
-    emailListProperty.set(currentEmailList);
+    emailListProperty = new SimpleListProperty<>(currentEmailList);
   }
 
   public void setConnection(Connection connection) {
     this.connection = connection;
   }
 
-  public void setCurrentEmailList(LinkedList<Email> currentEmailList) {
-    if(currentEmailList == null){
-      this.currentEmailList.clear();
-      return;
-    }
-    this.currentEmailList.setAll(currentEmailList);
+  public void setCurrentEmailList(LinkedList<Email> list) {
+
+    Platform.runLater(() -> {
+      if (list == null)
+        currentEmailList.clear();
+      else
+        currentEmailList.setAll(list);
+    });
   }
 
   public User getUser() {
@@ -62,90 +61,70 @@ public class ClientModel {
     return currentMail;
   }
 
-  public void setCurrentMail(Email currentMail) {
-    this.currentMail.set(currentMail);
-  }
-  public void setCurrentFolder(Folder currentFolder) {
-    this.currentFolder.set(currentFolder);
-  }
-
   public ListProperty<Email> emailListProperty() {
     return emailListProperty;
   }
 
-  public LinkedList<Email> getNews() throws IOException, ClassNotFoundException{
-
-    LinkedList<Email> news ;
-
-      Object data;
-
-      synchronized (connection) {
-
-        available = false;
-        connection.write("KEEP_UPDATE");
-        System.out.println("KEEP_UPDATE");
-        connection.write(user);
-        data = connection.read();
-        available = true;
-
-      }
-
-      if (!(data instanceof LinkedList<?>))
-        throw new InvalidObjectException("ClientModel.mailboxrequest[Invalid Object]: object read is not the right type");
-
-      news = (LinkedList<Email>) data;
-
-    return news;
+  public void setCurrentMail(Email mail) {
+    currentMail.set(mail);
   }
-  public LinkedList<Email> mailboxRequest(Folder folder) throws IOException, ClassNotFoundException{
 
-    LinkedList<Email> mailBox = new LinkedList<>();
-    if (folder != Folder.WRITE) {
+  public void setCurrentFolder(Folder folder) {
+    currentFolder.set(folder);
+  }
 
-      Object data;
-      synchronized (connection) {
+  public LinkedList<Email> getNews() throws IOException, ClassNotFoundException {
 
-        connection.write("MAILBOX_REQUEST");
-        System.out.print("MAILBOX_REQUEST: ");
-        connection.write(folder);
-        System.out.println(folder.toString().toUpperCase());
-        data = connection.read();
-
-      }
-
-      if (!(data instanceof LinkedList<?>))
-        throw new InvalidObjectException("ClientModel.mailboxrequest[Invalid Object]: object read is not the right type");
-
-      mailBox = (LinkedList<Email>) data;
-
+    Object data;
+    synchronized (connection) {
+      connection.write("KEEP_UPDATE");
+      connection.write(user);
+      data = connection.read();
     }
-    return mailBox;
+
+    if (!(data instanceof LinkedList<?>))
+      throw new InvalidObjectException("[getNews]: unexpected response type");
+
+    return (LinkedList<Email>) data;
   }
 
-  public boolean sendEmail(Email toSend) throws IOException, ClassNotFoundException{
+  public LinkedList<Email> mailboxRequest(Folder folder) throws IOException, ClassNotFoundException {
 
-    if(toSend == null)
+    if (folder == Folder.WRITE)
+      return new LinkedList<>();
+
+    Object data;
+    synchronized (connection) {
+      connection.write("MAILBOX_REQUEST");
+      connection.write(folder);
+      data = connection.read();
+    }
+
+    if (!(data instanceof LinkedList<?>))
+      throw new InvalidObjectException("[mailboxRequest]: unexpected response type");
+
+    return (LinkedList<Email>) data;
+  }
+
+  public boolean sendEmail(Email toSend) throws IOException, ClassNotFoundException {
+
+    if (toSend == null)
       throw new IllegalArgumentException("[sendEmail]: toSend is null");
 
     String resp;
-
     synchronized (connection) {
-
       connection.write("SEND_EMAIL");
-      System.out.print("SEND_EMAIL -> ");
       connection.write(toSend);
       resp = serverResponse();
-      System.out.println(resp);
-
     }
 
     switch (resp) {
       case "SERVER_SUCCESS" -> {
-        infoNotification("Email just sent");
+        infoNotification("Email sent successfully");
         return true;
       }
       case "USER_NOT_EXIST" -> {
-        infoNotification("User not exist");
+        infoNotification("One or more recipients do not exist");
         return false;
       }
       default -> {
@@ -154,51 +133,45 @@ public class ClientModel {
     }
   }
 
-  public boolean deleteEmail(Email toDelete) throws IOException, ClassNotFoundException{
+  public boolean deleteEmail(Email toDelete) throws IOException, ClassNotFoundException {
 
-    if(toDelete == null)
+    if (toDelete == null)
       throw new IllegalArgumentException("[deleteEmail]: toDelete is null");
 
     String resp;
-
     synchronized (connection) {
-
       connection.write("DEL_EMAIL");
-      System.out.print("DEL_EMAIL -> ");
       connection.write(toDelete);
       resp = serverResponse();
-      System.out.println(resp);
-
     }
 
     switch (resp) {
       case "SERVER_SUCCESS" -> {
-        infoNotification("Email deleted");
+        infoNotification("Email permanently deleted");
         return true;
       }
       case "MOVED_BIN" -> {
-        infoNotification("Email moved in bin");
+        infoNotification("Email moved to bin");
         return true;
       }
-      default -> {return false;}
+      default -> {
+        return false;
+      }
     }
   }
 
   public boolean notifyReadEmail(Email toNotify) throws IOException, ClassNotFoundException {
 
-    if(toNotify == null)
+    if (toNotify == null)
       throw new IllegalArgumentException("[notifyReadEmail]: toNotify is null");
 
     String resp;
     synchronized (connection) {
-
       connection.write("READ_FLAG");
-      System.out.print("READ_FLAG -> ");
       connection.write(toNotify);
       resp = serverResponse();
-      System.out.println(resp);
-
     }
+
     return resp.equals("SERVER_SUCCESS");
   }
 
@@ -207,27 +180,27 @@ public class ClientModel {
     Platform.runLater(() -> {
       Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
       alert.setTitle("Logout");
-      alert.setHeaderText("You're about to logout.");
-      if ( alert.showAndWait().get() == ButtonType.OK) {
-
-        try {
-          synchronized (connection) {
-
-            connection.write("LOG_OUT");
-            System.out.println("LOG_OUT");
-            connection.closeConnection();
+      alert.setHeaderText("You are about to logout.");
+      alert.showAndWait().ifPresent(response -> {
+        if (response == ButtonType.OK) {
+          try {
+            synchronized (connection) {
+              connection.write("LOG_OUT");
+              connection.closeConnection();
+            }
+            stage.close();
+          } catch (IOException e) {
+            e.printStackTrace();
           }
-          stage.close();
-        } catch (IOException e) {
-          throw new RuntimeException(e);
         }
-      }
+      });
     });
   }
 
   private String serverResponse() throws IOException, ClassNotFoundException {
     return (String) connection.read();
   }
+
   public void infoNotification(String message) {
     Platform.runLater(() -> {
       Alert alert = new Alert(Alert.AlertType.INFORMATION);

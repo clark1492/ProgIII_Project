@@ -9,38 +9,36 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
 import java.io.IOException;
 import java.net.URL;
-import java.util.Optional;
 import java.util.ResourceBundle;
 
 public class LoginController implements Initializable {
-  // loginPane
-  @FXML
-  private AnchorPane loginPane;
-  @FXML
-  private Label messageLabel;
-  @FXML
-  private TextField emailField;
-  @FXML
-  private PasswordField passwordField;
 
-  // signUpPane
-  @FXML
-  private AnchorPane signInPane;
-  @FXML
-  private TextField newEmailField;
-  @FXML
-  private PasswordField newPasswordField;
-  @FXML
-  private PasswordField newPassConf;
-  @FXML
-  private ImageView attentionImg;
+  @FXML private AnchorPane    loginPane;
+  @FXML private AnchorPane    signInPane;
+  @FXML private Label         messageLabel;
+  @FXML private TextField     emailField;
+  @FXML private PasswordField passwordField;
+  @FXML private TextField     newEmailField;
+  @FXML private PasswordField newPasswordField;
+  @FXML private PasswordField newPassConf;
+  @FXML private ImageView     attentionImg;
 
   private LoginModel model;
 
-
   @FXML
   protected void loginRequest() {
-    new Thread(new LoginThread()).start();
+    // FIX: i campi vengono letti QUI sul thread UI, prima di entrare nel thread
+    // — TextField non può essere letto da thread in background
+    String email    = emailField.getText();
+    String password = passwordField.getText();
+
+    new Thread(() -> {
+      try {
+        model.loginRequest(email, password);
+      } catch (IOException | ClassNotFoundException e) {
+        handleConnectionError(e);
+      }
+    }).start();
   }
 
   @FXML
@@ -53,11 +51,28 @@ public class LoginController implements Initializable {
   }
 
   @FXML
-  protected void signInOnAction(){
-    new Thread(new SignInThread()).start();
+  protected void signInOnAction() {
+    // FIX: stessa cosa — lettura dei campi sul thread UI
+    String email        = newEmailField.getText();
+    String password     = newPasswordField.getText();
+    String confirmation = newPassConf.getText();
+
+    new Thread(() -> {
+      try {
+        model.signUpRequest(email, password, confirmation);
+        Platform.runLater(() -> {
+          newEmailField.clear();
+          newPasswordField.clear();
+          newPassConf.clear();
+        });
+      } catch (IOException | ClassNotFoundException e) {
+        handleConnectionError(e);
+      }
+    }).start();
   }
+
   @FXML
-  protected void backOnAction(){
+  protected void backOnAction() {
     signInPane.setVisible(false);
     loginPane.setVisible(true);
     messageLabel.setText("");
@@ -65,16 +80,15 @@ public class LoginController implements Initializable {
     newPasswordField.clear();
     newPassConf.clear();
   }
-  private void noService(){
-    if(loginPane.isVisible())
-      loginPane.setVisible(false);
-    if(signInPane.isVisible())
-      signInPane.setVisible(false);
+
+  private void noService() {
+    loginPane.setVisible(false);
+    signInPane.setVisible(false);
     messageLabel.setText("SERVER UNREACHABLE");
     attentionImg.setVisible(true);
   }
 
-  private void onService(){
+  private void onService() {
     messageLabel.setText("");
     attentionImg.setVisible(false);
     loginPane.setVisible(true);
@@ -85,21 +99,25 @@ public class LoginController implements Initializable {
     noService();
     Alert alert = new Alert(Alert.AlertType.ERROR);
     alert.setTitle("Error");
-    alert.setHeaderText("Server unreacheable");
-    ButtonType updateButton = new ButtonType("Update");
-
-    alert.getButtonTypes().setAll(updateButton);
-    Optional<ButtonType> result =  alert.showAndWait();
-
-    if(result.isPresent() &&  result.get() == updateButton) {
-      try {
-        model = new LoginModel();
-        model.messageProperty().bindBidirectional(messageLabel.textProperty());
-        onService();
-      } catch (IOException | ClassNotFoundException e) {
-        errorNotification();
+    alert.setHeaderText("Server unreachable");
+    ButtonType retryButton = new ButtonType("Retry");
+    alert.getButtonTypes().setAll(retryButton);
+    alert.showAndWait().ifPresent(response -> {
+      if (response == retryButton) {
+        try {
+          model = new LoginModel();
+          model.messageProperty().bindBidirectional(messageLabel.textProperty());
+          onService();
+        } catch (IOException e) {
+          Platform.runLater(this::errorNotification);
+        }
       }
-    }
+    });
+  }
+
+  private void handleConnectionError(Exception e) {
+    System.out.println(e.getMessage());
+    Platform.runLater(this::errorNotification);
   }
 
   @Override
@@ -111,50 +129,9 @@ public class LoginController implements Initializable {
       model = new LoginModel();
       model.messageProperty().bindBidirectional(messageLabel.textProperty());
       onService();
-
-    } catch (IOException | ClassNotFoundException e) {
+    } catch (IOException e) {
       errorNotification();
       System.out.println(e.getMessage());
-    }
-  }
-
-  private class LoginThread implements Runnable{
-
-    public LoginThread() {}
-
-    @Override
-    public void run() {
-      Platform.runLater(() -> {
-        try {
-          model.loginRequest(emailField.getText(),passwordField.getText());
-        } catch (IOException | ClassNotFoundException e) {
-          errorNotification();
-          System.out.println(e.getMessage());
-        }
-      });
-    }
-  }
-
-  private class SignInThread implements Runnable{
-
-    public SignInThread() {}
-
-    @Override
-    public void run() {
-      Platform.runLater(() -> {
-        String email = newEmailField.getText();
-        String password = newPasswordField.getText();
-        String confermation = newPassConf.getText();
-        try {
-          model.signUpRequest(email, password, confermation);
-          newEmailField.clear();
-          newPasswordField.clear();
-          newPassConf.clear();
-        } catch (IOException | ClassNotFoundException e) {
-          errorNotification();
-          System.out.println(e.getMessage());
-        }
-      });
     }
   }
 }

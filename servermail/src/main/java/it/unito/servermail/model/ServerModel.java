@@ -2,7 +2,7 @@ package it.unito.servermail.model;
 
 import it.unito.servermail.handler.HandleClient;
 import it.unito.servermail.utils.FilesManager;
-
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -13,18 +13,16 @@ import java.util.ArrayList;
 
 public class ServerModel implements Runnable {
 
-  private final ServerSocket client;
+  private static final int PORT = 8189;
 
-  private SimpleStringProperty logText;
-
-  private ArrayList<User> usersList;
+  private final ServerSocket serverSocket;
+  private final ArrayList<User> usersList;
+  private final SimpleStringProperty logText;
 
   public ServerModel() throws IOException {
-
-    client = new ServerSocket(8189);
+    serverSocket = new ServerSocket(PORT);
     usersList = new ArrayList<>();
     logText = new SimpleStringProperty("");
-
   }
 
   public SimpleStringProperty logTextProperty() {
@@ -32,16 +30,16 @@ public class ServerModel implements Runnable {
   }
 
   public void setLogText(String string) {
-    this.logText.setValue(string);
+    Platform.runLater(() -> logText.setValue(string));
   }
 
-  public boolean addUser(User user) {
+  public synchronized boolean addUser(User user) {
     if (user == null)
       throw new IllegalArgumentException("User cannot be null");
-
     try {
       if (FilesManager.addUserToFile(user)) {
-        loadUsersList();
+
+        usersList.add(user);
         return true;
       }
     } catch (IOException | ClassNotFoundException e) {
@@ -50,50 +48,37 @@ public class ServerModel implements Runnable {
     return false;
   }
 
-  private void loadUsersList() {
+  private synchronized void loadUsersList() {
 
-    ArrayList<User> list = FilesManager.getUserList();
-
-    for (int i = 0; i < list.size(); i++) {
-      usersList.add(list.get(i));
-    }
+    usersList.clear();
+    usersList.addAll(FilesManager.getUserList());
   }
 
-  public boolean userExist(String value) {
-
-    if (value == null || value.isEmpty())
-      throw new IllegalArgumentException("User is null");
-
+  public synchronized boolean userExist(String email) {
+    if (email == null || email.isEmpty())
+      throw new IllegalArgumentException("Email cannot be null or empty");
     for (User user : usersList) {
-      if (user.getEmail().equals(value))
+      if (user.getEmail().equals(email))
         return true;
     }
-
     return false;
-
   }
 
-  public boolean passwordIsCorrect(String email, String password) {
-
+  public synchronized boolean passwordIsCorrect(String email, String password) {
     if (email == null || password == null)
-      throw new IllegalArgumentException();
-
+      throw new IllegalArgumentException("Email and password cannot be null");
     User user = getUser(email);
 
-    if (user.getPassword().equals(password))
-      return true;
-    return false;
-
+    if (user == null)
+      return false;
+    return user.getPassword().equals(password);
   }
 
-  public User getUser(String email) {
-
+  public synchronized User getUser(String email) {
     for (User user : usersList) {
-      if (user.getEmail().equals(email)) {
+      if (user.getEmail().equals(email))
         return user;
-      }
     }
-
     return null;
   }
 
@@ -103,7 +88,6 @@ public class ServerModel implements Runnable {
         FilesManager.serverFiles();
 
       loadUsersList();
-
 
       for (User user : usersList) {
         if (!Files.exists(Paths.get(FilesManager.FILES_PATH + user.getEmail())))
@@ -118,25 +102,17 @@ public class ServerModel implements Runnable {
   public void run() {
     Thread.currentThread().setName("Server");
     initialize();
-    setLogText("[SERVER] : Waiting clients connection...\n");
-    Socket incoming = null;
+    setLogText("[SERVER] : Waiting for client connections...\n");
+
     try {
       while (true) {
-        incoming = client.accept();
-        Thread client = new Thread(new HandleClient(this, incoming));
-        client.start();
+        Socket incoming = serverSocket.accept();
+        Thread clientThread = new Thread(new HandleClient(this, incoming));
+        clientThread.setName("HandleClient-" + incoming.getInetAddress());
+        clientThread.start();
       }
-    } catch (IOException | ClassNotFoundException e) {
+    } catch (IOException e) {
       System.out.println(e.getMessage());
-    } finally {
-      try {
-        if (incoming != null)
-          incoming.close();
-      } catch (IOException e) {
-        System.out.println(e.getMessage());
-      }
     }
   }
 }
-
-  ///////////////////////////////////////////
