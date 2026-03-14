@@ -116,6 +116,7 @@ public class LoginModel {
     controller.initModel(model);
     stage.setTitle("Unito - " + model.getUser().getEmail());
     stage.setScene(scene);
+    stage.setResizable(false);
     stage.show();
 
     stage.setOnCloseRequest(event -> {

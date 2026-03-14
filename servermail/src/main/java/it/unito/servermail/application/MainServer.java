@@ -17,6 +17,7 @@ public class MainServer extends Application{
       scene = new Scene(fxmlLoader.load());
       stage.setTitle("Server");
       stage.setScene(scene);
+      stage.setResizable(false);
       stage.show();
     } catch (IOException e) {
       e.printStackTrace();
@@ -27,3 +28,4 @@ public class MainServer extends Application{
     launch();
   }
 }
+

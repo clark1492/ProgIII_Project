@@ -10,76 +10,140 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox maxHeight="450.0" maxWidth="350.0" minHeight="450.0" minWidth="350.0" prefHeight="450.0" prefWidth="350.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="it.unito.clientmail.controller.LoginController">
+<VBox minHeight="450.0" minWidth="350.0" prefHeight="450.0" prefWidth="350.0"
+      xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="it.unito.clientmail.controller.LoginController">
    <children>
-        <AnchorPane maxHeight="170.0" maxWidth="200.0" minHeight="200.0" minWidth="350.0" prefHeight="170.0" prefWidth="350.0" style="-fx-background-color: #85C1E9;">
-            <children>
-                <ImageView fitHeight="170.0" fitWidth="269.0" layoutX="90.0" layoutY="4.0" opacity="0.75" pickOnBounds="true" preserveRatio="true" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="90.0" AnchorPane.rightAnchor="90.0" AnchorPane.topAnchor="15.0">
-                    <image>
-                        <Image url="@../img/Unito-logo.svg.png" />
-                    </image>
-                </ImageView>
-            </children>
-        </AnchorPane>
-      <AnchorPane prefHeight="250.0" prefWidth="350.0">
+
+      <!-- Header con logo -->
+      <AnchorPane style="-fx-background-color: #85C1E9;"
+                  minHeight="170.0" prefHeight="170.0" VBox.vgrow="NEVER">
          <children>
-            <Label fx:id="messageLabel" alignment="CENTER" textFill="#5dade2" AnchorPane.leftAnchor="50.0" AnchorPane.rightAnchor="50.0" AnchorPane.topAnchor="15.0">
-               <font>
-                  <Font name="System Bold" size="14.0" />
-               </font>
+            <ImageView fitHeight="140.0" fitWidth="200.0" opacity="0.85"
+                       pickOnBounds="true" preserveRatio="true"
+                       AnchorPane.bottomAnchor="15.0" AnchorPane.topAnchor="15.0"
+                       AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
+               <image>
+                  <Image url="@../img/Unito-logo.svg.png" />
+               </image>
+            </ImageView>
+         </children>
+      </AnchorPane>
+
+      <!-- Body -->
+      <AnchorPane VBox.vgrow="ALWAYS">
+         <children>
+
+            <!-- Label messaggi -->
+            <Label fx:id="messageLabel" alignment="CENTER" textFill="#5dade2"
+                   AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0"
+                   AnchorPane.topAnchor="10.0" maxWidth="Infinity">
+               <font><Font name="System Bold" size="13.0" /></font>
             </Label>
-              <AnchorPane fx:id="signInPane" maxHeight="250.0" maxWidth="350.0" minHeight="250.0" minWidth="350.0" prefHeight="250.0" prefWidth="350.0" style="-fx-background-color: transparent;">
-                  <children>
-                      <Button fx:id="button1" layoutX="207.0" layoutY="196.0" mnemonicParsing="false" onAction="#signInOnAction" prefHeight="40.0" prefWidth="90.0" style="-fx-background-color: #5DADE2;" text="Sign In" textFill="WHITE" AnchorPane.bottomAnchor="15.0" AnchorPane.rightAnchor="80.0">
-                          <font>
-                              <Font name="System Bold" size="12.0" />
-                          </font>
-                      </Button>
-                  <TextField fx:id="newEmailField" layoutX="75.0" layoutY="50.0" prefHeight="30.0" prefWidth="175.0" promptText="email" style="-fx-border-color: #5DADE2; -fx-background-color: transparent; -fx-border-width: 0px 0px 2px 0px;" AnchorPane.leftAnchor="87.5" AnchorPane.rightAnchor="87.5">
-                     <font>
-                        <Font size="14.0" />
-                     </font>
-                  </TextField>
-                  <PasswordField fx:id="newPasswordField" layoutX="75.0" layoutY="90.0" prefHeight="30.0" prefWidth="175.0" promptText="password" style="-fx-background-color: transparent; -fx-border-width: 0px 0px 2px 0px; -fx-border-color: #5DADE2;" AnchorPane.leftAnchor="87.5" AnchorPane.rightAnchor="87.5" />
-                  <PasswordField fx:id="newPassConf" layoutX="75.0" layoutY="130.0" prefHeight="30.0" prefWidth="175.0" promptText="conferma password" style="-fx-background-color: transparent; -fx-border-width: 0px 0px 2px 0px; -fx-border-color: #5DADE2;" AnchorPane.leftAnchor="87.5" AnchorPane.rightAnchor="87.5" />
-                  <Button fx:id="backButton" layoutX="88.0" layoutY="196.0" mnemonicParsing="false" onAction="#backOnAction" prefHeight="40.0" prefWidth="90.0" style="-fx-background-color: #5DADE2;" text="Back" textFill="WHITE" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="80.0">
-                     <font>
-                        <Font name="System Bold" size="12.0" />
-                     </font>
-                  </Button>
-                  </children>
-              </AnchorPane>
-              <AnchorPane fx:id="loginPane" maxHeight="250.0" maxWidth="350.0" minHeight="250.0" minWidth="350.0" prefHeight="250.0" prefWidth="350.0" style="-fx-background-color: transparent;" visible="false">
-                  <children>
-                      <Button fx:id="loginButton" layoutX="182.0" layoutY="160.0" mnemonicParsing="false" onAction="#loginRequest" prefHeight="40.0" prefWidth="90.0" style="-fx-background-color: #5DADE2;" text="Log In" textFill="WHITE" AnchorPane.bottomAnchor="15.0" AnchorPane.rightAnchor="80.0">
-                          <font>
-                              <Font name="System Bold" size="12.0" />
-                          </font>
-                      </Button>
-                  <ImageView fitHeight="30.0" fitWidth="30.0" layoutX="47.0" layoutY="126.0" opacity="0.5" pickOnBounds="true" preserveRatio="true" AnchorPane.leftAnchor="47.0">
-                     <image>
-                        <Image url="@../img/lock.png" />
-                     </image>
-                  </ImageView>
-                  <TextField fx:id="emailField" layoutX="87.5" layoutY="59.0" prefHeight="30.0" prefWidth="175.0" promptText="email" style="-fx-background-color: transparent; -fx-border-color: #5DADE2; -fx-border-width: 0px 0px 2px 0px;" AnchorPane.leftAnchor="87.5" AnchorPane.rightAnchor="87.5" />
-                  <Button fx:id="newUserButton" layoutX="83.0" layoutY="160.0" mnemonicParsing="false" onAction="#newUserOnAction" prefHeight="40.0" prefWidth="90.0" style="-fx-background-color: #5DADE2;" text="New User" textFill="WHITE" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="80.0">
-                     <font>
-                        <Font name="System Bold" size="12.0" />
-                     </font>
-                  </Button>
-                  <PasswordField fx:id="passwordField" layoutX="87.5" layoutY="126.0" prefHeight="30.0" prefWidth="175.0" promptText="password" style="-fx-background-color: transparent; -fx-border-color: #5DADE2; -fx-border-width: 0px 0px 2px 0px;" AnchorPane.leftAnchor="87.5" AnchorPane.rightAnchor="87.5" />
-                  <ImageView fitHeight="30.0" fitWidth="30.0" layoutX="47.0" layoutY="59.0" opacity="0.5" pickOnBounds="true" preserveRatio="true" AnchorPane.leftAnchor="47.0">
-                     <image>
-                        <Image url="@../img/toppng.com-user-account-management-logo-user-icon-561x561.png" />
-                     </image>
-                  </ImageView>
-                  </children>
-              </AnchorPane>
-            <ImageView fx:id="attentionImg" fitHeight="40.0" fitWidth="40.0" pickOnBounds="true" preserveRatio="true" visible="false" AnchorPane.bottomAnchor="145.0" AnchorPane.leftAnchor="155.0" AnchorPane.rightAnchor="155.0">
+
+            <!-- Icona attenzione -->
+            <ImageView fx:id="attentionImg" fitHeight="36.0" fitWidth="36.0"
+                       pickOnBounds="true" preserveRatio="true" visible="false"
+                       AnchorPane.bottomAnchor="10.0"
+                       AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
                <image>
                   <Image url="@../img/icons8-high-importance-80.png" />
                </image>
             </ImageView>
+
+            <!-- ===== Pannello Login ===== -->
+            <AnchorPane fx:id="loginPane" visible="true"
+                        style="-fx-background-color: transparent;"
+                        AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0"
+                        AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
+               <children>
+                  <!-- Icona utente -->
+                  <ImageView fitHeight="28.0" fitWidth="28.0" opacity="0.5"
+                             pickOnBounds="true" preserveRatio="true"
+                             AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="45.0">
+                     <image>
+                        <Image url="@../img/toppng.com-user-account-management-logo-user-icon-561x561.png" />
+                     </image>
+                  </ImageView>
+                  <!-- Icona lucchetto -->
+                  <ImageView fitHeight="28.0" fitWidth="28.0" opacity="0.5"
+                             pickOnBounds="true" preserveRatio="true"
+                             AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="110.0">
+                     <image>
+                        <Image url="@../img/lock.png" />
+                     </image>
+                  </ImageView>
+                  <!-- Campo email -->
+                  <TextField fx:id="emailField" prefHeight="30.0" promptText="email"
+                             style="-fx-background-color: transparent; -fx-border-color: #5DADE2; -fx-border-width: 0px 0px 2px 0px;"
+                             AnchorPane.leftAnchor="60.0" AnchorPane.rightAnchor="20.0"
+                             AnchorPane.topAnchor="45.0">
+                     <font><Font size="14.0" /></font>
+                  </TextField>
+                  <!-- Campo password -->
+                  <PasswordField fx:id="passwordField" prefHeight="30.0" promptText="password"
+                                 style="-fx-background-color: transparent; -fx-border-color: #5DADE2; -fx-border-width: 0px 0px 2px 0px;"
+                                 AnchorPane.leftAnchor="60.0" AnchorPane.rightAnchor="20.0"
+                                 AnchorPane.topAnchor="110.0">
+                  </PasswordField>
+                  <!-- Bottoni -->
+                  <Button fx:id="newUserButton" mnemonicParsing="false" onAction="#newUserOnAction"
+                          prefHeight="40.0" prefWidth="120.0"
+                          style="-fx-background-color: #5DADE2;" text="New User" textFill="WHITE"
+                          AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="20.0">
+                     <font><Font name="System Bold" size="12.0" /></font>
+                  </Button>
+                  <Button fx:id="loginButton" mnemonicParsing="false" onAction="#loginRequest"
+                          prefHeight="40.0" prefWidth="120.0"
+                          style="-fx-background-color: #5DADE2;" text="Log In" textFill="WHITE"
+                          AnchorPane.bottomAnchor="15.0" AnchorPane.rightAnchor="20.0">
+                     <font><Font name="System Bold" size="12.0" /></font>
+                  </Button>
+               </children>
+            </AnchorPane>
+
+            <!-- ===== Pannello Sign Up ===== -->
+            <AnchorPane fx:id="signInPane" visible="false"
+                        style="-fx-background-color: transparent;"
+                        AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0"
+                        AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
+               <children>
+                  <!-- Campo email -->
+                  <TextField fx:id="newEmailField" prefHeight="30.0" promptText="email"
+                             style="-fx-border-color: #5DADE2; -fx-background-color: transparent; -fx-border-width: 0px 0px 2px 0px;"
+                             AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0"
+                             AnchorPane.topAnchor="35.0">
+                     <font><Font size="14.0" /></font>
+                  </TextField>
+                  <!-- Campo password -->
+                  <PasswordField fx:id="newPasswordField" prefHeight="30.0" promptText="password"
+                                 style="-fx-background-color: transparent; -fx-border-width: 0px 0px 2px 0px; -fx-border-color: #5DADE2;"
+                                 AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0"
+                                 AnchorPane.topAnchor="85.0">
+                  </PasswordField>
+                  <!-- Campo conferma password -->
+                  <PasswordField fx:id="newPassConf" prefHeight="30.0" promptText="conferma password"
+                                 style="-fx-background-color: transparent; -fx-border-width: 0px 0px 2px 0px; -fx-border-color: #5DADE2;"
+                                 AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0"
+                                 AnchorPane.topAnchor="135.0">
+                  </PasswordField>
+                  <!-- Bottoni -->
+                  <Button fx:id="backButton" mnemonicParsing="false" onAction="#backOnAction"
+                          prefHeight="40.0" prefWidth="120.0"
+                          style="-fx-background-color: #5DADE2;" text="Back" textFill="WHITE"
+                          AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="20.0">
+                     <font><Font name="System Bold" size="12.0" /></font>
+                  </Button>
+                  <Button fx:id="signInButton" mnemonicParsing="false" onAction="#signInOnAction"
+                          prefHeight="40.0" prefWidth="120.0"
+                          style="-fx-background-color: #5DADE2;" text="Sign In" textFill="WHITE"
+                          AnchorPane.bottomAnchor="15.0" AnchorPane.rightAnchor="20.0">
+                     <font><Font name="System Bold" size="12.0" /></font>
+                  </Button>
+               </children>
+            </AnchorPane>
+
          </children>
       </AnchorPane>
    </children>

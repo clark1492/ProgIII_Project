@@ -37,37 +37,27 @@ public class HandleClient implements Runnable {
     inStream = new ObjectInputStream(incoming.getInputStream());
   }
 
-  private void closeStreams(){
+  private void closeStreams() {
     try {
-      if(inStream != null) {
-        inStream.close();
-      }
-
-      if(outStream != null) {
-        outStream.close();
-      }
-
-      if(incoming != null){
-        incoming.close();
-      }
+      if (inStream != null)  inStream.close();
+      if (outStream != null) outStream.close();
+      if (incoming != null)  incoming.close();
     } catch (IOException e) {
       e.printStackTrace();
     }
   }
 
   private void sendResponse(String resp) throws IllegalArgumentException, IOException {
-
     if (resp == null)
       throw new IllegalArgumentException();
-
     outStream.writeObject(resp);
   }
 
   private void loginData() throws IOException, ClassNotFoundException {
 
     Object data = inStream.readObject();
-    if (!(data.getClass() == String.class))
-      throw new InvalidObjectException("[Invalid Object]: You need an user to login\n");
+    if (!(data instanceof String))
+      throw new InvalidObjectException("[Invalid Object]: expected email string\n");
 
     String email = (String) data;
     if (!server.userExist(email)) {
@@ -75,10 +65,10 @@ public class HandleClient implements Runnable {
       server.setLogText("Authentication problem: user " + email + " does not exist\n");
       return;
     }
-    String password = (String) inStream.readObject();
 
-    if (!server.passwordIsCorrect(email,password)) {
-      sendResponse("UNCORRECT_PASSSWORD");
+    String password = (String) inStream.readObject();
+    if (!server.passwordIsCorrect(email, password)) {
+      sendResponse("INCORRECT_PASSWORD");
       server.setLogText("Authentication problem: password is not correct\n");
       return;
     }
@@ -86,24 +76,24 @@ public class HandleClient implements Runnable {
     sendResponse("SERVER_SUCCESS");
     client = server.getUser(email);
     outStream.writeObject(client);
-    server.setLogText("["+ client.getEmail() +"] " + " authenticated\n");
+    server.setLogText("[" + client.getEmail() + "] authenticated\n");
   }
 
   private void keepUpdate() throws IOException, ClassNotFoundException {
 
     Object data = inStream.readObject();
+    if (!(data instanceof User))
+      throw new InvalidObjectException("[Invalid Object]: expected User\n");
 
-    if (!(data.getClass() == User.class))
-      throw new InvalidObjectException("[Invalid Object]: You need an user to login\n");
-
-    if(client == null) {
+    if (client == null) {
       client = (User) data;
-      server.setLogText("["+ client.getEmail() +"] " + " connection re-established\n");
+      server.setLogText("[" + client.getEmail() + "] connection re-established\n");
     }
+
     LinkedList<Email> news = new LinkedList<>();
     LinkedList<Email> inbox = FilesManager.getMailBox(client.getEmail(), Folder.INBOX);
     for (Email email : inbox) {
-      if (!(email.isRead())) {
+      if (!email.isRead()) {
         news.add(email);
       }
     }
@@ -115,190 +105,151 @@ public class HandleClient implements Runnable {
     Object email = inStream.readObject();
     Object password = inStream.readObject();
 
+    if (!(email instanceof String) || !(password instanceof String))
+      throw new InvalidObjectException("[Invalid Object]: expected email and password strings\n");
 
-    if ((email.getClass() != String.class) || (password.getClass() != String.class)) {
-      throw new InvalidObjectException("[Invalid Object]: You need an user to login\n");
-    }
-
-    if (server.userExist((String)email)) {
+    if (server.userExist((String) email)) {
       sendResponse("USER_ALREADY_REGISTERED");
       server.setLogText("User " + email + " already registered\n");
       return;
     }
-    if (server.addUser(new User((String)email,(String)password))) {
-      //sendResponse(Protocol.SERVER_SUCCESS);
+
+    if (server.addUser(new User((String) email, (String) password))) {
       sendResponse("SERVER_SUCCESS");
       server.setLogText("User " + email + " registered\n");
       return;
     }
 
-    //sendResponse(Protocol.SERVER_UNSUCCESS);
     sendResponse("SERVER_UNSUCCESS");
-    server.setLogText("Sign Up problem: Client " + email + " not registered\n");
+    server.setLogText("Sign Up problem: client " + email + " not registered\n");
   }
 
   private void mailBoxRequest() throws IOException, ClassNotFoundException {
 
-    LinkedList<Email> mailList = null;
-
     Object data = inStream.readObject();
-
     if (!(data instanceof Folder))
-      throw new InvalidObjectException("[Invalid Object]: You need to specify the folder\n");
+      throw new InvalidObjectException("[Invalid Object]: expected Folder\n");
 
-    Folder fold = (Folder) data ;
-    mailList = FilesManager.getMailBox(client.getEmail(), fold);
-
+    Folder fold = (Folder) data;
+    LinkedList<Email> mailList = FilesManager.getMailBox(client.getEmail(), fold);
     outStream.writeObject(mailList);
   }
 
   private void sendEmailRequest() throws IOException, ClassNotFoundException {
 
     Object data = inStream.readObject();
-
     if (!(data instanceof Email))
-      throw new InvalidObjectException("[Invalid Object]: You need to specify the email\n");
+      throw new InvalidObjectException("[Invalid Object]: expected Email\n");
 
     Email toSend = (Email) data;
-
     boolean reply = (toSend.getReply() != null);
     List<String> listDests = toSend.getDests();
     String sender = toSend.getSender();
 
-    for (String user : listDests)
+    for (String user : listDests) {
       if (!server.userExist(user)) {
         sendResponse("USER_NOT_EXIST");
-        server.setLogText("[" + client.getEmail() + "] : Impossible to sent email, user " + user + " does not exist\n");
+        server.setLogText("[" + client.getEmail() + "] : impossible to send email, user " + user + " does not exist\n");
         return;
       }
+    }
 
     boolean multiDest = (listDests.size() > 1);
 
-    for(int i = 0; i < listDests.size(); i++){
+    for (int i = 0; i < listDests.size(); i++) {
+      boolean lastDest = (i == listDests.size() - 1);
+      FilesManager.insMailToMailbox(toSend, Folder.INBOX, listDests.get(i), !multiDest || lastDest);
 
-      if( (i != (listDests.size() - 1) && (multiDest)))
-        FilesManager.insMailToMailbox(toSend, Folder.INBOX, listDests.get(i),false);
-      else
-        FilesManager.insMailToMailbox(toSend, Folder.INBOX, listDests.get(i),true);
-
-      if(reply) //se è una risposta modifico pure la mail nella cartella SENT dei destinatari
-        FilesManager.insMailToMailbox(toSend,Folder.SENT,listDests.get(i),false);
-
+      if (reply)
+        FilesManager.insMailToMailbox(toSend, Folder.SENT, listDests.get(i), false);
     }
 
-    FilesManager.insMailToMailbox(toSend,Folder.SENT,sender,false);
+    FilesManager.insMailToMailbox(toSend, Folder.SENT, sender, false);
 
-    if (reply)//se è una risposta modifico pure la mail nella cartella INBOX del mittente
-      FilesManager.insMailToMailbox(toSend,Folder.INBOX,sender,false);
-
+    if (reply)
+      FilesManager.insMailToMailbox(toSend, Folder.INBOX, sender, false);
 
     sendResponse("SERVER_SUCCESS");
-    server.setLogText("[" + client.getEmail() + "] : Mail " + toSend.getId() + " sent correctly to " + listDests + "\n");
-
+    server.setLogText("[" + client.getEmail() + "] : mail " + toSend.getId() + " sent to " + listDests + "\n");
   }
 
   private void deleteEmailRequest() throws Exception {
-    Object data = inStream.readObject();
 
+    Object data = inStream.readObject();
     if (!(data instanceof Email))
-      throw new InvalidObjectException("[Invalid Object]: You need to specify the email\n");
+      throw new InvalidObjectException("[Invalid Object]: expected Email\n");
 
     Email toRemove = (Email) data;
 
-
-    if(toRemove.getBelonging() == Folder.BIN) {
-      FilesManager.rmMailFromMailbox(toRemove,client.getEmail());
+    if (toRemove.getBelonging() == Folder.BIN) {
+      FilesManager.rmMailFromMailbox(toRemove, client.getEmail());
       sendResponse("SERVER_SUCCESS");
-      server.setLogText("[" + client.getEmail() + "] : Mail " + toRemove.getId() + " removed correctly\n");
-    }
-    else {
-      FilesManager.moveMail(toRemove,Folder.BIN,client.getEmail());
+      server.setLogText("[" + client.getEmail() + "] : mail " + toRemove.getId() + " removed\n");
+    } else {
+      FilesManager.moveMail(toRemove, Folder.BIN, client.getEmail());
       sendResponse("MOVED_BIN");
-      server.setLogText("[" + client.getEmail() + "] : Mail " + toRemove.getId() + " moved to bin\n");
+      server.setLogText("[" + client.getEmail() + "] : mail " + toRemove.getId() + " moved to bin\n");
     }
-
   }
 
   private void readFlagRequest() throws IOException, ClassNotFoundException {
 
     Object data = inStream.readObject();
-
     if (!(data instanceof Email))
-      throw new InvalidObjectException("[Invalid Object]: You need to specify the email\n");
+      throw new InvalidObjectException("[Invalid Object]: expected Email\n");
 
     Email mail = (Email) data;
-
     FilesManager.setMailRead(client, mail);
     sendResponse("SERVER_SUCCESS");
-    server.setLogText("[" + client.getEmail() + "] : Mail " + mail.getId() + " set read-flag\n");
+    server.setLogText("[" + client.getEmail() + "] : mail " + mail.getId() + " marked as read\n");
   }
-
 
   @Override
   public void run() {
 
     while (!exit) {
-      Object read ;
       try {
-        String intro = (client != null)? ("["+ client.getEmail() +"] ") : ("");
-        System.out.println("Waiting for request...");
-        if ((read = inStream.readObject()) != null) {
-          if (read instanceof String) {
+        String intro = (client != null) ? ("[" + client.getEmail() + "] ") : ("[anonymous] ");
+        System.out.println(intro + "waiting for request...");
 
-            switch ((String) read) {
+        Object read = inStream.readObject();
 
-              case "LOGIN_REQUEST" -> {
-                System.out.println("LOGIN_REQUEST");
-                loginData();
-              }
-              case "SIGNIN_REQUEST" -> {
+        if (read == null)
+          throw new IllegalArgumentException("Received null command\n");
 
-                System.out.println("SIGNIN_REQUEST");
-                signInRequest();
-              }
-              case "MAILBOX_REQUEST" -> {
-                System.out.println( intro + "MAILBOX_REQUEST");
-                mailBoxRequest();
-              }
-              case "LOG_OUT" -> {
+        if (!(read instanceof String))
+          throw new InvalidObjectException("Command must be a String\n");
 
-                System.out.println( intro + "LOG_OUT");
-                exit = true;
-                server.setLogText( intro + " logged out\n");
-              }
-              case "SEND_EMAIL" -> {
-                System.out.println( intro + "SEND_EMAIL");
-                sendEmailRequest();
-              }
-              case "DEL_EMAIL" -> {
-                System.out.println( intro + "DEL_EMAIL");
-                deleteEmailRequest();
-              }
-              case "READ_FLAG" -> {
-                System.out.println( intro + "READ_FLAG");
-                readFlagRequest();
-              }
+        switch ((String) read) {
+          case "LOGIN_REQUEST"   -> { System.out.println(intro + "LOGIN_REQUEST");   loginData();        }
+          case "SIGNIN_REQUEST"  -> { System.out.println(intro + "SIGNIN_REQUEST");  signInRequest();    }
+          case "MAILBOX_REQUEST" -> { System.out.println(intro + "MAILBOX_REQUEST"); mailBoxRequest();   }
+          case "SEND_EMAIL"      -> { System.out.println(intro + "SEND_EMAIL");      sendEmailRequest(); }
+          case "DEL_EMAIL"       -> { System.out.println(intro + "DEL_EMAIL");       deleteEmailRequest();}
+          case "READ_FLAG"       -> { System.out.println(intro + "READ_FLAG");       readFlagRequest();  }
+          case "KEEP_UPDATE"     -> { System.out.println(intro + "KEEP_UPDATE");     keepUpdate();       }
+          case "LOG_OUT"         -> {
+            System.out.println(intro + "LOG_OUT");
+            exit = true;
+            server.setLogText(intro + "logged out\n");
+          }
+          default -> System.out.println(intro + "unknown command: " + read);
+        }
 
-              case "KEEP_UPDATE" -> {
-                System.out.println( intro + "KEEP_UPDATE");
-                keepUpdate();
-              }
-            }
-          } else
-            throw new InvalidObjectException("Must be instance of Protocol\n");
-        } else
-          throw new IllegalArgumentException("Argument should be not null\n");
       } catch (IOException e) {
+        // FIX: controllo null su client prima di chiamare getEmail()
+        String who = (client != null) ? client.getEmail() : "anonymous";
         e.printStackTrace();
         exit = true;
-        server.setLogText("Client " + client.getEmail() + " connection lost\n");
+        server.setLogText("Client " + who + " connection lost\n");
       } catch (ClassNotFoundException e) {
-        System.out.println("Illegal class sent");
+        System.out.println("Illegal class received");
         e.printStackTrace();
       } catch (Exception e) {
         e.printStackTrace();
       }
     }
+
     closeStreams();
   }
 }
